@@ -1,5 +1,5 @@
 defmodule EExHTML.Engine do
-  @moduledoc """
+  @moduledoc ~S"""
   An engine for templating HTML content.
 
   Interpolated values are HTML escaped,
@@ -24,14 +24,24 @@ defmodule EExHTML.Engine do
       iex> EEx.eval_string("foo <%= @bar %>", [assigns: %{bar: "<script>"}], engine: EExHTML.Engine)
       ...> |> IO.iodata_to_binary()
       "foo &lt;script&gt;"
+
+      # iex> EEx.eval_string("<%= for _ <- 1..1 do %><p><%= bar %></p><% end %>", [bar: "<script>"], engine: EExHTML.Engine)
+      # # ...> |> IO.iodata_to_binary()
+      # "foo &lt;script&gt;"
+
+      iex> EEx.eval_string("<%= for _ <- 1..1 do %><p><% end %>", [bar: "<script>"], engine: EExHTML.Engine)
+      # ...> |> IO.iodata_to_binary()
+      "foo &lt;script&gt;"
   """
   use EEx.Engine
 
   def init(_options) do
     quote do: []
+    # quote do: EExHTML.raw([])
   end
 
   def handle_begin(_previous) do
+    # quote do: EExHTML.raw([])
     quote do: []
   end
 
@@ -42,6 +52,7 @@ defmodule EExHTML.Engine do
   def handle_text(buffer, text) do
     quote do
       [unquote(buffer) | unquote(text)]
+      # EExHTML.raw([unquote(buffer).data | unquote(text)])
     end
   end
 
@@ -52,8 +63,18 @@ defmodule EExHTML.Engine do
   def handle_expr(buffer, "=", expr) do
     expr = Macro.prewalk(expr, &EEx.Engine.handle_assign/1)
 
+    # The problem is that a for comprehension returns a list of data.
+    # If wrapping is used, as in the comments here, then the list comprehension returns a list of safe content.
+    # We could special case this handle expr to know to not escape if given a list of safe content.
+    # phoenix_html does a thing where it recursivly tries to make safe all parts of an iolist.
+    # This might be overkill, I can't think of a reason to go more than one level deep but it might be more robust.
     quote do
       [unquote(buffer), EExHTML.escape(unquote(expr)).data]
+
+      IO.inspect(unquote(expr))
+
+      # EExHTML.raw([unquote(buffer).data, EExHTML.escape(unquote(expr)).data])
+      |> IO.inspect()
     end
   end
 

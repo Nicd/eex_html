@@ -23,7 +23,10 @@ defimpl EExHTML.Safe, for: EExHTML.Safe do
 end
 
 defimpl EExHTML.Safe, for: Any do
-  def to_iodata(term), do: String.Chars.to_string(term) |> EExHTML.escape_to_iodata()
+  def to_iodata(term) do
+    # IO.inspect(term)
+    String.Chars.to_string(term) |> EExHTML.escape_to_iodata()
+  end
 end
 
 defimpl String.Chars, for: EExHTML.Safe do
